@@ -4,59 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мониторинг АЗС РФ</title>
+    <!-- Подключаем профессиональные карты Leaflet + темная тема -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    <script src="https://unpkg.com"></script>
     <script src="https://telegram.org"></script>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Segoe UI', Roboto, sans-serif; background-color: #1a1a1a; color: #ffffff; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .card-container { width: 90%; max-width: 400px; background: #262626; border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); text-align: center; border: 1px solid #333; }
-        h2 { margin-top: 0; color: #4caf50; font-size: 22px; }
-        .map-mock { width: 100%; height: 200px; background: radial-gradient(circle, #2d4a2e 0%, #1c2b1d 100%); border-radius: 12px; margin: 15px 0; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; border: 1px dashed #4caf50; overflow: hidden; }
-        .grid-line { position: absolute; background: rgba(76, 175, 80, 0.1); }
-        .station { position: absolute; width: 12px; height: 12px; background: #ff9800; border-radius: 50%; box-shadow: 0 0 10px #ff9800; cursor: pointer; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
-        .station.green { background: #4caf50; box-shadow: 0 0 10px #4caf50; }
-        .info-block { background: #333; padding: 12px; border-radius: 8px; font-size: 14px; text-align: left; line-height: 1.5; margin-bottom: 10px; }
-        .btn { background: #4caf50; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 16px; transition: 0.2s; }
-        .btn:hover { background: #45a049; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #111; }
+        #map { height: 100%; width: 100%; }
+        /* Красивые кастомные карточки внутри карты */
+        .leaflet-popup-content-wrapper { background: #222 !important; color: #fff !important; border-radius: 12px !important; padding: 5px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; }
+        .leaflet-popup-tip { background: #222 !important; }
+        .popup-title { font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #4caf50; }
+        .popup-price { font-size: 14px; margin: 4px 0; display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 4px; }
+        .price-val { font-weight: bold; color: #ff9800; }
+        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; margin-top: 8px; text-align: center; width: 90%; }
+        .status-ok { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+        .status-fail { background: rgba(244, 67, 54, 0.2); color: #f44336; }
     </style>
 </head>
 <body>
 
-<div class="card-container">
-    <h2>📍 Мониторинг АЗС РФ</h2>
-    <p style="font-size: 14px; color: #aaa; margin: 0;">Интерактивный радар доступности топлива</p>
-    
-    <div class="map-mock">
-        <!-- Сетка радара -->
-        <div class="grid-line" style="width: 100%; height: 1px; top: 50%;"></div>
-        <div class="grid-line" style="width: 1px; height: 100%; left: 50%;"></div>
-        <!-- Тестовые АЗС (отобразятся точками прямо на экране) -->
-        <div class="station green" style="top: 35%; left: 40%;" title="Газпромнефть"></div>
-        <div class="station" style="top: 60%; left: 65%;" title="Лукойл"></div>
-        <span style="font-size: 12px; color: #4caf50; z-index: 2; font-weight: bold; background: rgba(26,26,26,0.8); padding: 4px 8px; border-radius: 4px;">КАРТА АКТИВНА</span>
-    </div>
-
-    <div class="info-block">
-        <b>🟢 АЗС Газпромнефть №1 (СПб):</b><br>
-        ⛽️ АИ-95: 56.20₽ | 🐋 ДТ: 65.10₽<br>
-        <span style="color: #4caf50;">● Топливо в наличии</span>
-    </div>
-
-    <div class="info-block">
-        <b>🔴 АЗС Лукойл №12 (Трасса М-10):</b><br>
-        ⛽️ АИ-95: 57.50₽ | ❌ ДТ: Закончился<br>
-        <span style="color: #f44336;">● Ограничение по дизелю</span>
-    </div>
-
-    <button class="btn" onclick="tg.close()">Вернуться в бот</button>
-</div>
+<div id="map"></div>
 
 <script>
-    // Инициализация интерфейса Telegram Telegram WebApp
     const tg = window.Telegram.WebApp;
-    if (tg) {
-        tg.ready();
-        tg.expand();
-    }
+    if (tg) { tg.ready(); tg.expand(); }
+
+    // Создаем карту с фокусом на Питер (координаты центра РФ или любого города подставятся автоматически позже)
+    const map = L.map('map', { zoomControl: false }).setView([59.93863, 30.31413], 12);
+
+    // Добавляем стильную темную карту, как в навигаторах премиум-класса
+    L.tileLayer('https://{s}://{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    // Данные заправок (в будущем они будут подгружаться из твоей базы данных в реальном времени)
+    const azsPoints = [
+        { name: "Газпромнефть №15", lat: 59.9420, lng: 30.3120, ai95: "56.20₽", dt: "65.10₽", status: "ok", statusText: "🟢 Топливо в наличии" },
+        { name: "Лукойл №102", lat: 59.9250, lng: 30.3210, ai95: "57.50₽", dt: "Закончился ❌", status: "fail", statusText: "🔴 Дизеля нет в цистерне" },
+        { name: "Татнефть №44", lat: 59.9310, lng: 30.3550, ai95: "55.90₽", dt: "64.80₽", status: "ok", statusText: "🟢 Очередей нет" }
+    ];
+
+    // Отрисовываем заправки на карте
+    azsPoints.forEach(azs => {
+        // Создаем маркер
+        const marker = L.marker([azs.lat, azs.lng]).addTo(map);
+        
+        // Красивое наполнение карточки при клике на заправку
+        const popupContent = `
+            <div class="popup-title">⛽️ ${azs.name}</div>
+            <div class="popup-price"><span>Бензин АИ-95:</span> <span class="price-val">${azs.ai95}</span></div>
+            <div class="popup-price"><span>Дизель (ДТ):</span> <span class="price-val">${azs.dt}</span></div>
+            <div class="status-badge ${azs.status === 'ok' ? 'status-ok' : 'status-fail'}">
+                ${azs.statusText}
+            </div>
+        `;
+        
+        marker.bindPopup(popupContent);
+    });
 </script>
 </body>
 </html>
