@@ -3,41 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Мониторинг АЗС</title>
-    <!-- Официальный скрипт Яндекс.Карт -->
-    <script src="https://yandex.ru" type="text/javascript"></script>
+    <title>Мониторинг АЗС РФ</title>
+    <!-- Подключаем стабильные и проверенные карты OpenStreetMap -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    <script src="https://unpkg.com"></script>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #1a1a1c; }
-        #map { height: 100%; width: 100%; }
-        .azs-title { font-family: sans-serif; font-size: 15px; font-weight: bold; color: #007bc1; margin-bottom: 5px; }
-        .azs-text { font-family: sans-serif; font-size: 13px; color: #333; line-height: 1.4; }
+        /* Жестко задаем размеры, чтобы карта не сжималась в ноль */
+        body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: #111; }
+        #map { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
+        
+        /* Стиль всплывающего окна АЗС */
+        .azs-popup { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 14px; line-height: 1.4; min-width: 180px; }
+        .azs-name { font-weight: bold; font-size: 16px; color: #007bc1; margin-bottom: 6px; }
+        .price { font-weight: bold; color: #ff9800; }
     </style>
 </head>
 <body>
+
 <div id="map"></div>
+
 <script>
-    ymaps.ready(init);
-    function init() {
-        const myMap = new ymaps.Map("map", {
-            center: [59.93863, 30.31413], // Санкт-Петербург
-            zoom: 12,
-            controls: ['zoomControl', 'geolocationControl']
-        });
+    // 1. Создаем карту и жестко привязываем к блоку #map
+    // Сразу фокусируемся на Санкт-Петербург (масштаб 12)
+    const map = L.map('map', { zoomControl: true }).setView([59.93863, 30.31413], 12);
 
-        // Реальные метки АЗС
-        const azsList = [
-            { name: "Газпромнефть №15", coords: [59.9420, 30.3120], text: "<b>АИ-95:</b> 56.20 ₽<br><b>ДТ:</b> 65.10 ₽<br><br><span style='color:green;'>● Топливо в наличии</span>" },
-            { name: "Лукойл №102", coords: [59.9250, 30.3210], text: "<b>АИ-95:</b> 57.50 ₽<br><span style='color:red;font-weight:bold;'>❌ ДТ закончился</span>" }
-        ];
+    // 2. Подгружаем стандартный детальный слой дорог и домов, который работает везде
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
 
-        azsList.forEach(azs => {
-            const placemark = new ymaps.Placemark(azs.coords, {
-                balloonContentHeader: `<div class="azs-title">${azs.name}</div>`,
-                balloonContentBody: `<div class="azs-text">${azs.text}</div>`
-            }, { preset: 'islands#blueGasStationIcon' });
-            myMap.geoObjects.add(placemark);
-        });
-    }
+    // 3. Наша база данных заправок с координатами в СПб
+    const azsData = [
+        { name: "Газпромнефть №15", lat: 59.9420, lng: 30.3120, text: "⛽️ АИ-95: <span class='price'>56.20 ₽</span><br>🐋 ДТ: <span class='price'>65.10 ₽</span><br><br><span style='color:green;'>● Топливо в наличии</span>" },
+        { name: "Лукойл №102", lat: 59.9250, lng: 30.3210, text: "⛽️ АИ-95: <span class='price'>57.50 ₽</span><br><span style='color:red;font-weight:bold;'>❌ ДТ закончился</span>" },
+        { name: "Татнефть №44", lat: 59.9310, lng: 30.3550, text: "⛽️ АИ-95: <span class='price'>55.90 ₽</span><br>🐋 ДТ: <span class='price'>64.80 ₽</span><br><br><span style='color:green;'>● Очередей нет</span>" }
+    ];
+
+    // 4. Расставляем маркеры на карте города
+    azsData.forEach(azs => {
+        const marker = L.marker([azs.lat, azs.lng]).addTo(map);
+        
+        const popupContent = `
+            <div class="azs-popup">
+                <div class="azs-name">${azs.name}</div>
+                <div>${azs.text}</div>
+            </div>
+        `;
+        
+        marker.bindPopup(popupContent);
+    });
 </script>
 </body>
 </html>
