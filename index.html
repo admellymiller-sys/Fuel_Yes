@@ -4,68 +4,85 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Мониторинг АЗС СПб</title>
+    <!-- Официальный скрипт Яндекс.Карт - подключаем бесплатную рабочую версию -->
+    <script src="https://yandex.ru" type="text/javascript"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background-color: #141416; color: #fff; display: flex; justify-content: center; align-items: center; }
-        .screen { width: 100vw; height: 100vh; background: #1c1d22; display: flex; flex-direction: column; position: relative; }
-        .header { background: #23242a; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; color: #4caf50; border-bottom: 1px solid #2e3038; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; background-color: #141416; color: #fff; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        .screen { width: 100vw; height: 100vh; display: flex; flex-direction: column; position: relative; }
+        .header { background: #23242a; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; color: #4caf50; border-bottom: 1px solid #2e3038; z-index: 10; }
         
-        /* Настоящая интерактивная сетка дорог без внешних загрузок */
-        .map-area { flex-grow: 1; position: relative; background: #18191d; overflow: hidden; background-image: radial-gradient(#2a2b36 1px, transparent 1px); background-size: 20px 20px; }
-        .road-h { position: absolute; width: 100%; height: 14px; background: #282930; top: 40%; }
-        .road-v { position: absolute; width: 14px; height: 100%; background: #282930; left: 50%; }
-        .river { position: absolute; width: 100%; height: 40px; background: #1d2736; top: 15%; transform: rotate(-5deg); display: flex; align-items: center; padding-left: 20px; color: #3b5275; font-size: 12px; font-weight: bold; }
+        /* КОНТЕЙНЕР ДЛЯ РЕАЛЬНОЙ КАРТЫ - ТЕПЕРЬ С ЖЕСТКИМИ РАЗМЕРАМИ */
+        #map { width: 100%; flex-grow: 1; height: calc(100vh - 160px); background: #18191d; position: relative; z-index: 1; }
         
-        /* Маркеры заправок */
-        .pin { position: absolute; width: 32px; height: 32px; background: #ff9800; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); cursor: pointer; display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite; }
-        .pin::after { content: '⛽'; transform: rotate(45deg); font-size: 16px; }
-        .pin.green { background: #4caf50; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(76,175,80,0.7); } 70% { box-shadow: 0 0 0 10px rgba(76,175,80,0); } 100% { box-shadow: 0 0 0 0 rgba(76,175,80,0); } }
-        
-        /* Всплывающее меню с ценами */
-        .info-box { background: #23242a; margin: 15px; padding: 15px; border-radius: 12px; border: 1px solid #2e3038; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        /* Нижняя панель с ценами */
+        .info-box { background: #23242a; padding: 15px; border-top: 1px solid #2e3038; box-shadow: 0 -4px 15px rgba(0,0,0,0.3); z-index: 10; height: 90px; }
         .title { font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #4caf50; }
-        .price-line { display: flex; justify-content: space-between; margin: 5px 0; font-size: 14px; color: #ccc; }
+        .price-line { display: flex; justify-content: space-between; margin: 4px 0; font-size: 14px; color: #ccc; }
         .price { font-weight: bold; color: #ff9800; }
     </style>
 </head>
 <body>
 
 <div class="screen">
-    <div class="header">📍 ОНЛАЙН-КАРТА АЗС САНКТ-ПЕТЕРБУРГ</div>
+    <div class="header">📍 КАРТА АЗС САНКТ-ПЕТЕРБУРГ</div>
     
-    <div class="map-area">
-        <div class="river">река НЕВА</div>
-        <div class="road-h"></div>
-        <div class="road-v"></div>
-        
-        <!-- Заправка 1 -->
-        <div class="pin green" style="top: 32%; left: 35%;" onclick="showAzs('Газпромнефть №15', '56.20 ₽', '65.10 ₽', '🟢 Топливо в наличии')"></div>
-        <!-- Заправка 2 -->
-        <div class="pin" style="top: 55%; left: 55%;" onclick="showAzs('Лукойл №102', '57.50 ₽', 'Закончился ❌', '🔴 Нет дизеля в цистерне')"></div>
-    </div>
+    <!-- Сюда Яндекс загрузит настоящие дороги и дома -->
+    <div id="map"></div>
 
     <div class="info-box" id="infoBox">
-        <div class="title" id="azsName">👉 Нажмите на значок заправки</div>
+        <div class="title" id="azsName">👉 Кликните на значок заправки на карте</div>
         <div id="azsPrices" style="display: none;">
             <div class="price-line"><span>Бензин АИ-95:</span> <span class="price" id="p95">0</span></div>
             <div class="price-line"><span>Дизель ДТ:</span> <span class="price" id="pDt">0</span></div>
-            <div id="azsStatus" style="font-size: 13px; margin-top: 8px; font-weight: bold;"></div>
+            <div id="azsStatus" style="font-size: 13px; margin-top: 4px; font-weight: bold;"></div>
         </div>
     </div>
 </div>
 
 <script>
-    function showAzs(name, p95, dt, status) {
-        document.getElementById('azsPrices').style.display = 'block';
-        document.getElementById('azsName').innerText = name;
-        document.getElementById('p95').innerText = p95;
-        document.getElementById('pDt').innerText = dt;
-        
-        const statusBlock = document.getElementById('azsStatus');
-        statusBlock.innerText = status;
-        statusBlock.style.color = status.includes('🟢') ? '#4caf50' : '#f44336';
+    // Ждем, пока загрузится система Яндекс.Карт
+    ymaps.ready(init);
+
+    function init() {
+        // Создаем карту внутри нашего блока #map
+        const myMap = new ymaps.Map("map", {
+            center: [59.93863, 30.31413], // Центр Санкт-Петербурга
+            zoom: 12,
+            controls: ['zoomControl', 'geolocationControl']
+        });
+
+        // Отключаем лишние элементы, чтобы карта выглядела чище
+        myMap.options.set('yandexMapDisablePoiInteractivity', true);
+
+        // База данных наших заправок
+        const azsList = [
+            { name: "Газпромнефть №15", coords: [59.9420, 30.3120], p95: "56.20 ₽", dt: "65.10 ₽", status: "🟢 Топливо в наличии" },
+            { name: "Лукойл №102", coords: [59.9250, 30.3210], p95: "57.50 ₽", dt: "Закончился ❌", status: "🔴 Нет дизеля в цистерне" },
+            { name: "Татнефть №44", coords: [59.9310, 30.3550], p95: "55.90 ₽", dt: "64.80 ₽", status: "🟢 Очередей нет" }
+        ];
+
+        // Размещаем заправки на реальной карте Яндекса
+        azsList.forEach(azs => {
+            const placemark = new ymaps.Placemark(azs.coords, {}, {
+                preset: 'islands#blueGasStationIcon', // Красивый синий значок колонки от Яндекса
+                balloonPanelMaxMapArea: 0 // Отключаем стандартные балуны, так как у нас свое меню снизу
+            });
+
+            // Настраиваем клик на значок заправки
+            placemark.events.add('click', function () {
+                document.getElementById('azsPrices').style.display = 'block';
+                document.getElementById('azsName').innerText = azs.name;
+                document.getElementById('p95').innerText = azs.p95;
+                document.getElementById('pDt').innerText = azs.dt;
+                
+                const statusBlock = document.getElementById('azsStatus');
+                statusBlock.innerText = azs.status;
+                statusBlock.style.color = azs.status.includes('🟢') ? '#4caf50' : '#f44336';
+            });
+
+            myMap.geoObjects.add(placemark);
+        });
     }
 </script>
 </body>
 </html>
-
