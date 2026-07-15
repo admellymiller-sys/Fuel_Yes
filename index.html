@@ -3,18 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Мониторинг АЗС СПб</title>
-    <!-- Жестко подключаем движок Leaflet -->
-    <link rel="stylesheet" href="https://unpkg.com" />
-    <script src="https://unpkg.com"></script>
+    <title>Мониторинг АЗС</title>
+    <!-- Здесь больше нет ключа Яндекса, страница полностью безопасна -->
     <style>
         body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; font-family: -apple-system, sans-serif; background-color: #141416; color: #fff; display: flex; flex-direction: column; overflow: hidden; }
-        .header { background: #23242a; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; color: #4caf50; border-bottom: 1px solid #2e3038; }
-        
-        /* Блок под настоящую карту */
+        .header { background: #23242a; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; color: #4caf50; border-bottom: 1px solid #2e3038; height: 50px; box-sizing: border-box; }
         #map { width: 100vw; height: calc(100vh - 140px); background: #1a1a1c; }
-        
-        /* Нижнее меню цен */
         .info-box { background: #23242a; padding: 15px; border-top: 1px solid #2e3038; box-shadow: 0 -4px 15px rgba(0,0,0,0.3); height: 90px; box-sizing: border-box; }
         .title { font-size: 16px; font-weight: bold; margin-bottom: 4px; color: #4caf50; }
         .price-line { display: flex; justify-content: space-between; margin: 4px 0; font-size: 14px; color: #ccc; }
@@ -22,53 +16,10 @@
     </style>
 </head>
 <body>
-
     <div class="header">📍 КАРТА АЗС САНКТ-ПЕТЕРБУРГ</div>
-    
-    <!-- Сюда загрузится реальная карта -->
     <div id="map"></div>
-
     <div class="info-box" id="infoBox">
-        <div class="title" id="azsName">👉 Кликните на значок заправки на карте</div>
-        <div id="azsPrices" style="display: none;">
-            <div class="price-line"><span>Бензин АИ-95:</span> <span class="price" id="p95">0</span></div>
-            <div class="price-line"><span>Дизель ДТ:</span> <span class="price" id="pDt">0</span></div>
-            <div id="azsStatus" style="font-size: 13px; margin-top: 4px; font-weight: bold;"></div>
-        </div>
+        <div class="title" id="azsName">Загрузка защищенной карты...</div>
     </div>
-
-<script>
-    // 1. Инициализируем карту строго в Санкт-Петербурге
-    const map = L.map('map', { zoomControl: true }).setView([59.93863, 30.31413], 12);
-
-    // 2. Подключаем стабильный слой международных карт Wikimedia, который не требует ключей
-    L.tileLayer('https://wikimedia.org{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap'
-    }).addTo(map);
-
-    // 3. База данных тестовых заправок
-    const azsList = [
-        { name: "Газпромнефть №15", coords: [59.9420, 30.3120], p95: "56.20 ₽", dt: "65.10 ₽", status: "🟢 Топливо в наличии" },
-        { name: "Лукойл №102", coords: [59.9250, 30.3210], p95: "57.50 ₽", dt: "Закончился ❌", status: "🔴 Нет дизеля в цистерне" },
-        { name: "Татнефть №44", coords: [59.9310, 30.3550], p95: "55.90 ₽", dt: "64.80 ₽", status: "🟢 Очередей нет" }
-    ];
-
-    // 4. Расставляем маркеры заправок
-    azsList.forEach(azs => {
-        const marker = L.marker(azs.coords).addTo(map);
-
-        // При клике на маркер обновляем наше меню снизу
-        marker.on('click', function () {
-            document.getElementById('azsPrices').style.display = 'block';
-            document.getElementById('azsName').innerText = azs.name;
-            document.getElementById('p95').innerText = azs.p95;
-            document.getElementById('pDt').innerText = azs.dt;
-            
-            const statusBlock = document.getElementById('azsStatus');
-            statusBlock.innerText = azs.status;
-            statusBlock.style.color = azs.status.includes('🟢') ? '#4caf50' : '#f44336';
-        });
-    });
-</script>
 </body>
 </html>
