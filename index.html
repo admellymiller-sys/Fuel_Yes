@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Мониторинг АЗС СПб</title>
-    <!-- Подключаем официальный скрипт Яндекс.Карт с рабочим API-ключом -->
-    <script src="https://yandex.ru" type="text/javascript"></script>
+    <!-- Жестко подключаем движок Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    <script src="https://unpkg.com"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; font-family: -apple-system, sans-serif; background-color: #141416; color: #fff; display: flex; flex-direction: column; overflow: hidden; }
         .header { background: #23242a; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; color: #4caf50; border-bottom: 1px solid #2e3038; }
         
-        /* БЛОК ДЛЯ ОТОБРАЖЕНИЯ НАСТОЯЩЕЙ КАРТЫ */
+        /* Блок под настоящую карту */
         #map { width: 100vw; height: calc(100vh - 140px); background: #1a1a1c; }
         
         /* Нижнее меню цен */
@@ -24,7 +25,7 @@
 
     <div class="header">📍 КАРТА АЗС САНКТ-ПЕТЕРБУРГ</div>
     
-    <!-- Сюда Яндекс загрузит карту -->
+    <!-- Сюда загрузится реальная карта -->
     <div id="map"></div>
 
     <div class="info-box" id="infoBox">
@@ -37,46 +38,37 @@
     </div>
 
 <script>
-    // Запуск Яндекс.Карт после загрузки скрипта
-    ymaps.ready(init);
+    // 1. Инициализируем карту строго в Санкт-Петербурге
+    const map = L.map('map', { zoomControl: true }).setView([59.93863, 30.31413], 12);
 
-    function init() {
-        // Создаем карту Яндекса
-        const myMap = new ymaps.Map("map", {
-            center: [59.93863, 30.31413], // Санкт-Петербург
-            zoom: 12,
-            controls: ['zoomControl', 'geolocationControl']
+    // 2. Подключаем стабильный слой международных карт Wikimedia, который не требует ключей
+    L.tileLayer('https://wikimedia.org{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    // 3. База данных тестовых заправок
+    const azsList = [
+        { name: "Газпромнефть №15", coords: [59.9420, 30.3120], p95: "56.20 ₽", dt: "65.10 ₽", status: "🟢 Топливо в наличии" },
+        { name: "Лукойл №102", coords: [59.9250, 30.3210], p95: "57.50 ₽", dt: "Закончился ❌", status: "🔴 Нет дизеля в цистерне" },
+        { name: "Татнефть №44", coords: [59.9310, 30.3550], p95: "55.90 ₽", dt: "64.80 ₽", status: "🟢 Очередей нет" }
+    ];
+
+    // 4. Расставляем маркеры заправок
+    azsList.forEach(azs => {
+        const marker = L.marker(azs.coords).addTo(map);
+
+        // При клике на маркер обновляем наше меню снизу
+        marker.on('click', function () {
+            document.getElementById('azsPrices').style.display = 'block';
+            document.getElementById('azsName').innerText = azs.name;
+            document.getElementById('p95').innerText = azs.p95;
+            document.getElementById('pDt').innerText = azs.dt;
+            
+            const statusBlock = document.getElementById('azsStatus');
+            statusBlock.innerText = azs.status;
+            statusBlock.style.color = azs.status.includes('🟢') ? '#4caf50' : '#f44336';
         });
-
-        // База данных тестовых заправок
-        const azsList = [
-            { name: "Газпромнефть №15", coords: [59.9420, 30.3120], p95: "56.20 ₽", dt: "65.10 ₽", status: "🟢 Топливо в наличии" },
-            { name: "Лукойл №102", coords: [59.9250, 30.3210], p95: "57.50 ₽", dt: "Закончился ❌", status: "🔴 Нет дизеля в цистерне" },
-            { name: "Татнефть №44", coords: [59.9310, 30.3550], p95: "55.90 ₽", dt: "64.80 ₽", status: "🟢 Очередей нет" }
-        ];
-
-        // Ставим метки на карту Яндекса
-        azsList.forEach(azs => {
-            const placemark = new ymaps.Placemark(azs.coords, {}, {
-                preset: 'islands#blueGasStationIcon', // Официальная синяя иконка заправки
-                balloonPanelMaxMapArea: 0 // Отключаем стандартные окна Яндекса
-            });
-
-            // Настраиваем вывод цен в наше красивое нижнее меню при клике
-            placemark.events.add('click', function () {
-                document.getElementById('azsPrices').style.display = 'block';
-                document.getElementById('azsName').innerText = azs.name;
-                document.getElementById('p95').innerText = azs.p95;
-                document.getElementById('pDt').innerText = azs.dt;
-                
-                const statusBlock = document.getElementById('azsStatus');
-                statusBlock.innerText = azs.status;
-                statusBlock.style.color = azs.status.includes('🟢') ? '#4caf50' : '#f44336';
-            });
-
-            myMap.geoObjects.add(placemark);
-        });
-    }
+    });
 </script>
 </body>
 </html>
