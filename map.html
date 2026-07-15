@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карта АЗС СПб</title>
+    <!-- Подключаем стили карт -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    <script src="https://unpkg.com"></script>
+    <!-- Скрипт Telegram WebApp -->
+    <script src="https://telegram.org"></script>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; }
+        #map { height: 100%; width: 100%; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+    // Инициализируем Telegram WebApp
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand(); // Раскрываем окно на максимум
+
+    // Создаем карту с центром в Санкт-Петербурге
+    const map = L.map('map').setView([59.93863, 30.31413], 11);
+
+    // Подгружаем красивый темный слой карты под стиль Telegram
+    L.tileLayer('https://{s}://{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    // ТЕСТОВЫЕ МАРКЕРЫ АЗС В СПБ
+    // В будущем эти данные будут автоматически лететь из вашей базы данных!
+    const azsData = [
+        { name: "Газпромнефть №1", lat: 59.9400, lng: 30.3100, fuel: "АИ-95: 56.20₽ | ДТ: 65.10₽", status: "В наличии" },
+        { name: "Лукойл №12", lat: 59.9200, lng: 30.3500, fuel: "АИ-95: 57.50₽ | ДТ: Закончился ❌", status: "Нет ДТ" }
+    ];
+
+    // Расставляем маркеры на карте
+    azsData.forEach(azs => {
+        const marker = L.marker([azs.lat, azs.lng]).addTo(map);
+        marker.bindPopup(`<b>${azs.name}</b><br>${azs.fuel}<br><i>Статус: ${azs.status}</i>`);
+    });
+</script>
+</body>
+</html>
