@@ -2,24 +2,32 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Мониторинг АЗС РФ</title>
-    <!-- Подключаем профессиональные карты Leaflet + темная тема -->
+    <!-- Картографический движок профессионального уровня -->
     <link rel="stylesheet" href="https://unpkg.com" />
     <script src="https://unpkg.com"></script>
     <script src="https://telegram.org"></script>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #111; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background-color: #111214; }
         #map { height: 100%; width: 100%; }
-        /* Красивые кастомные карточки внутри карты */
-        .leaflet-popup-content-wrapper { background: #222 !important; color: #fff !important; border-radius: 12px !important; padding: 5px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; }
-        .leaflet-popup-tip { background: #222 !important; }
-        .popup-title { font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #4caf50; }
-        .popup-price { font-size: 14px; margin: 4px 0; display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 4px; }
-        .price-val { font-weight: bold; color: #ff9800; }
-        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; margin-top: 8px; text-align: center; width: 90%; }
-        .status-ok { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
-        .status-fail { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+        
+        /* Стилизация всплывающих окон (Попапов) под премиум-дизайн */
+        .leaflet-popup-content-wrapper { background: #1e2024 !important; color: #ffffff !important; border-radius: 14px !important; padding: 6px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important; border: 1px solid #2e3238; }
+        .leaflet-popup-tip { background: #1e2024 !important; border: 1px solid #2e3238; }
+        .leaflet-popup-close-button { color: #aaa !important; padding: 8px 8px 0 0 !important; }
+        
+        /* Контент внутри карточки АЗС */
+        .azs-info { min-width: 200px; }
+        .azs-name { font-size: 16px; font-weight: 700; color: #4caf50; margin-bottom: 10px; border-bottom: 1px solid #2e3238; padding-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+        .fuel-row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 14px; color: #dddddd; }
+        .fuel-price { font-weight: 700; color: #ff9800; }
+        .fuel-empty { color: #f44336; font-weight: 700; }
+        
+        /* Индикатор статуса */
+        .status-badge { text-align: center; margin-top: 10px; padding: 6px; border-radius: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.3px; }
+        .status-available { background: rgba(76, 175, 80, 0.15); color: #4caf50; border: 1px solid rgba(76, 175, 80, 0.3); }
+        .status-alert { background: rgba(244, 67, 54, 0.15); color: #f44336; border: 1px solid rgba(244, 67, 54, 0.3); }
     </style>
 </head>
 <body>
@@ -27,40 +35,42 @@
 <div id="map"></div>
 
 <script>
+    // Сигнал для Telegram WebApp
     const tg = window.Telegram.WebApp;
     if (tg) { tg.ready(); tg.expand(); }
 
-    // Создаем карту с фокусом на Питер (координаты центра РФ или любого города подставятся автоматически позже)
+    // Инициализируем карту (Фокус на Санкт-Петербург, масштаб 12)
     const map = L.map('map', { zoomControl: false }).setView([59.93863, 30.31413], 12);
 
-    // Добавляем стильную темную карту, как в навигаторах премиум-класса
+    // Подключаем детализированную темную карту (улицы, дороги, дома, развязки)
     L.tileLayer('https://{s}://{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap'
+        attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Данные заправок (в будущем они будут подгружаться из твоей базы данных в реальном времени)
-    const azsPoints = [
-        { name: "Газпромнефть №15", lat: 59.9420, lng: 30.3120, ai95: "56.20₽", dt: "65.10₽", status: "ok", statusText: "🟢 Топливо в наличии" },
-        { name: "Лукойл №102", lat: 59.9250, lng: 30.3210, ai95: "57.50₽", dt: "Закончился ❌", status: "fail", statusText: "🔴 Дизеля нет в цистерне" },
-        { name: "Татнефть №44", lat: 59.9310, lng: 30.3550, ai95: "55.90₽", dt: "64.80₽", status: "ok", statusText: "🟢 Очередей нет" }
+    // Настоящая база данных для отображения на карте (тестовый пакет для демонстрации)
+    const azsList = [
+        { name: "Газпромнефть №15", lat: 59.9420, lng: 30.3120, ai95: "56.20 ₽", dt: "65.10 ₽", isAvailable: true, statusText: "🟢 Топливо в наличии" },
+        { name: "Лукойл №102", lat: 59.9250, lng: 30.3210, ai95: "57.50 ₽", dt: "Закончился ❌", isAvailable: false, statusText: "🔴 Нет дизеля в цистерне" },
+        { name: "Роснефть №44", lat: 59.9310, lng: 30.3550, lat: 59.9310, lng: 30.3550, ai95: "55.90 ₽", dt: "64.80 ₽", isAvailable: true, statusText: "🟢 Очередей нет" }
     ];
 
-    // Отрисовываем заправки на карте
-    azsPoints.forEach(azs => {
-        // Создаем маркер
+    // Отрисовка маркеров заправок на реальной карте
+    azsList.forEach(azs => {
         const marker = L.marker([azs.lat, azs.lng]).addTo(map);
         
-        // Красивое наполнение карточки при клике на заправку
-        const popupContent = `
-            <div class="popup-title">⛽️ ${azs.name}</div>
-            <div class="popup-price"><span>Бензин АИ-95:</span> <span class="price-val">${azs.ai95}</span></div>
-            <div class="popup-price"><span>Дизель (ДТ):</span> <span class="price-val">${azs.dt}</span></div>
-            <div class="status-badge ${azs.status === 'ok' ? 'status-ok' : 'status-fail'}">
-                ${azs.statusText}
+        // Верстка карточки АЗС
+        const htmlContent = `
+            <div class="azs-info">
+                <div class="azs-name">⛽️ ${azs.name}</div>
+                <div class="fuel-row"><span>Бензин АИ-95:</span> <span class="fuel-price">${azs.ai95}</span></div>
+                <div class="fuel-row"><span>Дизель ДТ:</span> <span class="${azs.dt.includes('❌') ? 'fuel-empty' : 'fuel-price'}">${azs.dt}</span></div>
+                <div class="status-badge ${azs.isAvailable ? 'status-available' : 'status-alert'}">
+                    ${azs.statusText}
+                </div>
             </div>
         `;
         
-        marker.bindPopup(popupContent);
+        marker.bindPopup(htmlContent);
     });
 </script>
 </body>
