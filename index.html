@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Карта АЗС СПб</title>
-    <!-- Подключаем стили карт -->
-    <link rel="stylesheet" href="https://unpkg.com" />
-    <script src="https://unpkg.com"></script>
+    <title>Мониторинг АЗС</title>
+    <!-- Подключаем официальные и стабильные Яндекс.Карты -->
+    <script src="https://yandex.ru" type="text/javascript"></script>
     <!-- Скрипт Telegram WebApp -->
     <script src="https://telegram.org"></script>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #1e1e1e; }
         #map { height: 100%; width: 100%; }
     </style>
 </head>
@@ -19,31 +18,42 @@
 <div id="map"></div>
 
 <script>
-    // Инициализируем Telegram WebApp
+    // Сообщаем Telegram, что приложение готово
     const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand(); // Раскрываем окно на максимум
+    if (tg) {
+        tg.ready();
+        tg.expand();
+    }
 
-    // Создаем карту с центром в Санкт-Петербурге
-    const map = L.map('map').setView([59.93863, 30.31413], 11);
+    // Ждем загрузки Яндекс.Карт
+    ymaps.ready(init);
 
-    // Подгружаем красивый темный слой карты под стиль Telegram
-    L.tileLayer('https://{s}://{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap'
-    }).addTo(map);
+    function init() {
+        // Создаем карту с центром в СПб (координаты изменятся автоматически на регион пользователя позже)
+        const myMap = new ymaps.Map("map", {
+            center: [59.93863, 30.31413],
+            zoom: 11,
+            controls: ['zoomControl', 'geolocationControl']
+        });
 
-    // ТЕСТОВЫЕ МАРКЕРЫ АЗС В СПБ
-    // В будущем эти данные будут автоматически лететь из вашей базы данных!
-    const azsData = [
-        { name: "Газпромнефть №1", lat: 59.9400, lng: 30.3100, fuel: "АИ-95: 56.20₽ | ДТ: 65.10₽", status: "В наличии" },
-        { name: "Лукойл №12", lat: 59.9200, lng: 30.3500, fuel: "АИ-95: 57.50₽ | ДТ: Закончился ❌", status: "Нет ДТ" }
-    ];
+        // ТЕСТОВЫЕ МАРКЕРЫ АЗС
+        const azsData = [
+            { name: "Газпромнефть №1", coords: [59.9400, 30.3100], text: "АИ-95: 56.20₽ | ДТ: 65.10₽ (В наличии)" },
+            { name: "Лукойл №12", coords: [59.9200, 30.3500], text: "АИ-95: 57.50₽ | ДТ: Закончился ❌" }
+        ];
 
-    // Расставляем маркеры на карте
-    azsData.forEach(azs => {
-        const marker = L.marker([azs.lat, azs.lng]).addTo(map);
-        marker.bindPopup(`<b>${azs.name}</b><br>${azs.fuel}<br><i>Статус: ${azs.status}</i>`);
-    });
+        // Добавляем их на карту
+        azsData.forEach(azs => {
+            const placemark = new ymaps.Placemark(azs.coords, {
+                balloonContentHeader: azs.name,
+                balloonContentBody: azs.text
+            }, {
+                preset: 'islands#blueGasStationIcon' // Красивая иконка заправки
+            });
+            myMap.geoObjects.add(placemark);
+        });
+    }
 </script>
 </body>
 </html>
+
